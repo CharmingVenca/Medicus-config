@@ -21,39 +21,31 @@ for /f "tokens=1-4 delims=." %%a in ("%newServer%") do (
 )
 if defined valid goto input
 
-rem Create a temporary file
-set "tempFile=%temp%\Medicus.tmp"
 set "foundSection=0"
 set "updated=0"
 
-rem Replace the server IP in the temporary file
-(for /f "delims=" %%i in ('type "%file%"') do (
+for /f "delims=" %%i in ('type "%file%"') do (
     set "line=%%i"
     if "!line!"=="%section%" (
         set "foundSection=1"
     )
     if "!foundSection!"=="1" (
         if "!line:~0,%_keyLen%!"=="%key%=" (
-            echo %key%=%newServer%>>"%tempFile%"
+            set "line=%key%=%newServer%"
             set "updated=1"
             set "foundSection=0"
-            goto :skippingLine
         )
     )
-    echo !line!>>"%tempFile%"
-    :skippingLine
-))
-rem Append new key if not found in section
+    echo !line!
+)
+
 if "!updated!"=="0" (
     (for /f "delims=" %%i in ('type "%file%"') do (
-        echo !line!>>"%tempFile%"
+        echo !line!
         if "%%i"=="%section%" (
-            echo %key%=%newServer%>>"%tempFile%"
+            echo %key%=%newServer%
         )
     )) <"%file%"
 )
-
-rem Move the temporary file to the original file
-move /y "%tempFile%" "%file%">nul
 
 endlocal
