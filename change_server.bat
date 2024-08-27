@@ -23,25 +23,24 @@ if defined valid goto input
 
 rem Create a temporary file
 set "tempFile=%temp%\Medicus.tmp"
+set "foundSection=0"
 
-rem Replace the server IP in the file
+rem Replace the server IP in the temporary file
 (for /f "usebackq tokens=*" %%i in ("%file%") do (
     set "line=%%i"
     if "!line!"=="%section%" (
-        echo !line!>>"%tempFile%"
-        set found=1
-        set /p nextLine=<'%file%'
-        if "!nextLine:~0,7!"=="%key%=" (
-            echo !nextLine!|find /i "%key%=">nul
-            if !errorlevel!==0 (
-                echo %key%=%newServer%>>"%tempFile%"
-            )
-        ) else (
-            echo !nextLine!>>"%tempFile%"
-        )
+        set "foundSection=1"
     ) else (
-        echo !line!>>"%tempFile%"
+        if "!foundSection!"=="1" (
+            if "!line:~0,%_keyLen%!"=="%key%=" (
+                echo %key%=%newServer%>>"%tempFile%"
+                set "foundSection=0"
+                set "skipLine=1"
+            )
+        )
     )
+    if not defined skipLine echo !line!>>"%tempFile%"
+    set "skipLine="
 ))
 
 rem Move the temporary file to the original file
@@ -49,7 +48,7 @@ move /y "%tempFile%" "%file%">nul
 
 rem Create the install command
 echo mkdir "%userprofile%\Desktop">>create_script.bat
-echo copy "%~f0" "%userprofile%\Desktop\change server.bat">>create_script.bat
+echo copy "%~f0" "%userprofile%\Desktop\change_server.bat">>create_script.bat
 echo del create_script.bat>>create_script.bat
 
 endlocal
