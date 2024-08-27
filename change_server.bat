@@ -1,61 +1,48 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal enabledelayedexpansion
 
-set "file=C:\Medicus 3\Medicus.ini"
-set "tempFile=C:\Medicus 3\temp.ini"
-set "section=[Data]"
-set "key=Server"
+REM Define the file path
+set "filePath=C:\Medicus 3\Medicus.ini"
+set "newFileContent="
 
-:input
-set /p newServer=Enter the new server IP:
-
-rem Validate IP
-for /f "tokens=1-4 delims=." %%a in ("%newServer%") do (
-    set "valid=1"
-    if "%%a" lss "0" set "valid=0"
-    if "%%a" gtr "255" set "valid=0"
-    if "%%b" lss "0" set "valid=0"
-    if "%%b" gtr "255" set "valid=0"
-    if "%%c" lss "0" set "valid=0"
-    if "%%c" gtr "255" set "valid=0"
-    if "%%d" lss "0" set "valid=0"
-    if "%%d" gtr "255" set "valid=0"
-)
-if "!valid!"=="0" (
-    goto input
-)
-
-set "foundSection=0"
-set "updated=0"
-
-for /f "delims=" %%i in ('type "%file%"') do (
-    set "line=%%i"
-    if "!line!"=="%section%" (
-        set "foundSection=1"
-    )
-    if "!foundSection!"=="1" (
-        if "!line:~0,%key:len%!"=="%key%=" (
-            set "line=%key%=%newServer%"
-            set "updated=1"
-            set "foundSection=0"
-        )
-    )
-    >> "%tempFile%" echo !line!
-)
-
-if "!updated!"=="0" (
-    > "%tempFile%" (
-        for /f "delims=" %%i in ('type "%file%"') do (
-            echo %%i
-            if "%%i"=="%section%" (
-                echo %key%=%newServer%
-            )
-        )
+REM Function to validate IP address format
+:validateIP
+set "ip=%1"
+for /f "tokens=1-4 delims=." %%a in ("%ip%") do (
+    if "%%d"=="" goto invalidIP
+    for %%x in (%%a %%b %%c %%d) do (
+        set /a "num=%%x"
+        if !num! lss 0 goto invalidIP
+        if !num! gtr 255 goto invalidIP
     )
 )
+goto :eof
 
-copy /y "%tempFile%" "%file%"
-del "%tempFile%"
+:invalidIP
+echo Invalid IP address. Please try again.
+exit /b 1
 
-pause
+REM Prompt user for new server IP
+:promptIP
+set /p "newIP=Enter the new server IP: "
+call :validateIP %newIP%
+if %errorlevel% neq 0 goto promptIP
+
+REM Read and replace IP in file, storing result in memory
+for /f "usebackq tokens=1* delims=" %%a in ("%filePath%") do (
+    set "line=%%a"
+    if "%%a"=="Server=%oldServerIP%" (
+        echo Found the server IP line: %%a
+        set "line=Server=%newIP%"
+    )
+    set "newFileContent=!newFileContent!!line!!newline!"
+)
+
+REM Write the updated content back to the original file
+> "%filePath%" (
+    echo !newFileContent!
+)
+
+echo Server IP has been updated to %newIP%.
 endlocal
+pause
