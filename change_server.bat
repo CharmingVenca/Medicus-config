@@ -27,29 +27,27 @@ set "foundSection=0"
 set "updated=0"
 
 rem Replace the server IP in the temporary file
-(for /f "usebackq tokens=*" %%i in ("%file%") do (
+(for /f "delims=" %%i in ('type "%file%"') do (
     set "line=%%i"
     if "!line!"=="%section%" (
         set "foundSection=1"
-        echo !line!>>"%tempFile%"
-        continue
-    ) else (
-        if "!foundSection!"=="1" (
-            if "!line:~0,%_keyLen%!"=="%key%=" (
-                echo %key%=%newServer%>>"%tempFile%"
-                set "updated=1"
-                continue
-            )
+    )
+    if "!foundSection!"=="1" (
+        if "!line:~0,%_keyLen%!"=="%key%=" (
+            echo %key%=%newServer%>>"%tempFile%"
+            set "updated=1"
+            set "foundSection=0"
+            goto :skippingLine
         )
     )
     echo !line!>>"%tempFile%"
+    :skippingLine
 ))
-
 rem Append new key if not found in section
 if "!updated!"=="0" (
-    (for /f "tokens=*" %%i in ('findstr /n "^" "%file%" ^| findstr /b /c:"%section%" /c:"%key%" ') do (
-        if "%%i"=="%section%:%key%=" (
-            set /a updated+=1
+    (for /f "delims=" %%i in ('type "%file%"') do (
+        echo !line!>>"%tempFile%"
+        if "%%i"=="%section%" (
             echo %key%=%newServer%>>"%tempFile%"
         )
     )) <"%file%"
