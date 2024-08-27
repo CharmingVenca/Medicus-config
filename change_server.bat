@@ -22,7 +22,6 @@ for /f "tokens=1-4 delims=." %%a in ("%newServer%") do (
     if "%%d" gtr "255" set "valid=0"
 )
 if "!valid!"=="0" (
-    echo Invalid IP. Please try again.
     goto input
 )
 
@@ -58,6 +57,5 @@ if "!updated!"=="0" (
 copy /y "%tempFile%" "%file%"
 del "%tempFile%"
 
-echo Update complete.
 pause
 endlocal
