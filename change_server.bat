@@ -1,47 +1,55 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal EnableDelayedExpansion
 
-REM Define the file path
-set "filePath=C:\Medicus 3\Medicus.ini"
+set "file=C:\Medicus 3\Medicus.ini"
+set "section=[Data]"
+set "key=Server"
 
-REM Function to validate IP address format
-:validateIP
-set "ip=%1"
-for /f "tokens=1-4 delims=." %%a in ("%ip%") do (
-    if "%%d"=="" goto invalidIP
-    for %%x in (%%a %%b %%c %%d) do (
-        set /a "num=%%x"
-        if !num! lss 0 goto invalidIP
-        if !num! gtr 255 goto invalidIP
+:input
+set /p newServer=Enter the new server IP:
+
+rem Validate IP
+for /f "tokens=1-4 delims=." %%a in ("%newServer%") do (
+    if "%%a" lss "0" set valid=0
+    if "%%a" gtr "255" set valid=0
+    if "%%b" lss "0" set valid=0
+    if "%%b" gtr "255" set valid=0
+    if "%%c" lss "0" set valid=0
+    if "%%c" gtr "255" set valid=0
+    if "%%d" lss "0" set valid=0
+    if "%%d" gtr "255" set valid=0
+)
+if defined valid goto input
+
+rem Create a temporary file
+set "tempFile=%temp%\Medicus.tmp"
+
+rem Replace the server IP in the file
+(for /f "usebackq tokens=*" %%i in ("%file%") do (
+    set "line=%%i"
+    if "!line!"=="%section%" (
+        echo !line!>>"%tempFile%"
+        set found=1
+        set /p nextLine=<'%file%'
+        if "!nextLine:~0,7!"=="%key%=" (
+            echo !nextLine!|find /i "%key%=">nul
+            if !errorlevel!==0 (
+                echo %key%=%newServer%>>"%tempFile%"
+            )
+        ) else (
+            echo !nextLine!>>"%tempFile%"
+        )
+    ) else (
+        echo !line!>>"%tempFile%"
     )
-)
-goto :eof
+))
 
-:invalidIP
-echo Invalid IP address. Please try again.
-exit /b 1
+rem Move the temporary file to the original file
+move /y "%tempFile%" "%file%">nul
 
-REM Prompt user for new server IP
-:promptIP
-set /p "newIP=Enter the new server IP: "
-call :validateIP %newIP%
-if %errorlevel% neq 0 goto promptIP
+rem Create the install command
+echo mkdir "%userprofile%\Desktop">>create_script.bat
+echo copy "%~f0" "%userprofile%\Desktop\change server.bat">>create_script.bat
+echo del create_script.bat>>create_script.bat
 
-REM Replace the IP address in the file
-for /f "tokens=1* delims==" %%a in ('findstr /b /c:"Server=" "%filePath%"') do (
-    set "oldServerIP=%%b"
-)
-if defined oldServerIP (
-    echo Old Server IP: %oldServerIP%
-    (for /f "usebackq tokens=*" %%a in ("%filePath%") do (
-        set "line=%%a"
-        set "line=!line:%oldServerIP%=%newIP%!"
-        echo !line!
-    )) > "%filePath%.tmp"
-    move /y "%filePath%.tmp" "%filePath%"
-    echo Server IP has been updated to %newIP%.
-) else (
-    echo Failed to find the current server IP in the file.
-)
 endlocal
-pause
